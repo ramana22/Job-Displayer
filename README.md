@@ -1,89 +1,53 @@
-# Job Displayer (.NET)
+# Job Displayer
 
-An ASP.NET Core web application that stores HiringCafe Job Watcher results, calculates a resume-based matching score, and surfaces the data through a responsive dashboard.
+A lightweight Flask application that stores the positions surfaced by the HiringCafe Job Watcher, calculates a resume-based matching score, and displays everything in a web dashboard.
 
 ## Features
 
-- SQLite-backed persistence for job postings and uploaded resumes.
-- REST API (`/api/jobs`) for the HiringCafe Job Watcher to push new postings.
-- Dashboard with timeframe filters (recent, last 24 hours, past 3 days, past 5 days) and ATS-style matching scores.
-- Resume uploader that stores the latest resume and uses plain-text extraction for keyword comparisons.
+- REST API to ingest job postings (`POST /api/jobs`).
+- Resume upload endpoint (`POST /api/resume`) to keep the latest resume on record.
+- Matching score calculation between the active resume and every job.
+- Dashboard that lists jobs in a sortable table with timeframe filters (Recent, Last 24 Hours, Past 3 Days, Past 5 Days).
 
-## Project Structure
+## Getting Started
 
-```
-JobDisplayer.sln
-└── JobDisplayer.Web/            # ASP.NET Core MVC project
-    ├── Controllers/             # Dashboard UI and jobs ingestion API
-    ├── Data/                    # Entity Framework Core DbContext
-    ├── Models/                  # Job posting & resume entities
-    ├── Services/                # Matching score calculator & timeframe helper
-    ├── ViewModels/              # DTOs for UI/API
-    ├── Views/                   # Razor views for the dashboard
-    └── wwwroot/                 # Static assets (CSS/JS)
-```
+### Requirements
 
-## Prerequisites
+- Python 3.10+
+- pip
 
-- [.NET 7 SDK](https://dotnet.microsoft.com/download)
-
-## Running the Application
-
-Restore dependencies and run the web project:
+### Installation
 
 ```bash
-dotnet restore
-dotnet run --project JobDisplayer.Web
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-The site listens on <https://localhost:5001> (and HTTP on `5000`). A SQLite database `app.db` is created in the project root if it does not exist.
-
-## Environment Configuration
-
-Connection strings are stored in `appsettings.json`. Override the database path by setting `ConnectionStrings:DefaultConnection` (environment variable `ConnectionStrings__DefaultConnection`).
-
-## API Contract
-
-### `POST /api/jobs`
-
-Accepts an array of job postings:
-
-```json
-[
-  {
-    "jobTitle": "Senior Backend Engineer",
-    "company": "Hiring Café",
-    "location": "Remote",
-    "salary": "$140k",
-    "applyLink": "https://example.com/apply",
-    "searchKey": "backend engineer",
-    "description": "Work on the Hiring Café platform",
-    "postedAt": "2023-10-17T13:45:00Z"
-  }
-]
-```
-
-- `jobTitle` and `company` are required.
-- `postedAt` is optional (defaults to current time if omitted).
-- Duplicates are ignored when the `applyLink` already exists.
-
-### `GET /api/jobs?timeframe=24h`
-
-Returns up to 500 most recent records ordered by `postedAt`. Optional `timeframe` filter supports `recent` (default), `24h`, `3d`,
-`5d`.
-
-## Resume Matching
-
-Uploading a resume from the dashboard stores the file and extracts text for keyword matching (plain text files are recommended). Matching scores are calculated by overlapping keywords from the resume with each job’s title, company, location, search key, and description.
-
-## Integrating the HiringCafe Job Watcher
-
-Update the watcher workflow to invoke the API after fetching new jobs:
+### Running the application
 
 ```bash
-curl -X POST "https://<your-host>/api/jobs" \
-     -H "Content-Type: application/json" \
-     -d @jobs.json
+flask --app app run --debug
 ```
 
-This allows the dashboard to display the latest openings, matching scores, and filtering options.
+The application starts on <http://localhost:5000>. The default SQLite database is created automatically as `jobs.db`. You can override the database path by setting the `JOB_DISPLAYER_DATABASE` environment variable to a SQLAlchemy compatible URI.
+
+### API Summary
+
+- `POST /api/jobs`
+  - Accepts either a single job object or a list of jobs.
+  - Each job supports the following keys: `job_title`, `company`, `location`, `salary`, `apply_link`, `search_key`, `description`, `posted_at` (ISO 8601 string).
+- `GET /api/jobs?timeframe=<recent|24h|3d|5d>`
+  - Returns the stored jobs sorted by newest first and the calculated matching score.
+- `POST /api/resume`
+  - Accepts a `multipart/form-data` upload (`file` field). The most recently uploaded resume is used to compute scores.
+- `GET /api/resume`
+  - Retrieves metadata about the most recently uploaded resume.
+
+### HiringCafe Job Watcher Integration
+
+Configure your HiringCafe Job Watcher workflow to `POST` the JSON payload directly to `/api/jobs`. The application deduplicates jobs by `apply_link` when provided.
+
+## Matching Score
+
+The matching score is a simple keyword overlap between the resume and each job (using job title, company, location, salary, search key, and description). Uploading a resume enables the score calculation; otherwise the table prompts the user to upload one.
