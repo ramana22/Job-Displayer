@@ -1,0 +1,114 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Job Dashboard";
+}
+
+<section class="alerts">
+    @if (!string.IsNullOrEmpty(ViewBag.StatusMessage))
+    {
+        <div class="alert alert-success">@ViewBag.StatusMessage</div>
+    }
+    @if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+    {
+        <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+    }
+</section>
+
+<section class="resume-panel card">
+    <header class="card-header">
+        <h2>Resume</h2>
+        @if (Model.HasResume)
+        {
+            <span class="tag">Uploaded @Model.ResumeUploadedAt?.ToLocalTime().ToString("g")</span>
+        }
+        else
+        {
+            <span class="tag tag-muted">No resume uploaded</span>
+        }
+    </header>
+    <form asp-action="UploadResume" asp-controller="Dashboard" method="post" enctype="multipart/form-data" class="resume-form">
+        <div class="form-group">
+            <label for="resumeFile">Upload resume (plain text works best for keyword matching)</label>
+            <input type="file" id="resumeFile" name="resumeFile" accept=".txt,.pdf,.doc,.docx" required />
+        </div>
+        <button type="submit" class="btn">Save resume</button>
+    </form>
+</section>
+
+<section class="filters card">
+    <header class="card-header">
+        <h2>Filters</h2>
+    </header>
+    <div class="filter-buttons">
+        <a asp-action="Index" asp-route-timeframe="recent" class="btn @(Model.ActiveFilter == "recent" ? "btn-primary" : "btn-outline")">Recent</a>
+        <a asp-action="Index" asp-route-timeframe="24h" class="btn @(Model.ActiveFilter == "24h" ? "btn-primary" : "btn-outline")">Last 24 hours</a>
+        <a asp-action="Index" asp-route-timeframe="3d" class="btn @(Model.ActiveFilter == "3d" ? "btn-primary" : "btn-outline")">Past 3 days</a>
+        <a asp-action="Index" asp-route-timeframe="5d" class="btn @(Model.ActiveFilter == "5d" ? "btn-primary" : "btn-outline")">Past 5 days</a>
+    </div>
+</section>
+
+<section class="jobs card">
+    <header class="card-header">
+        <h2>Job Applications</h2>
+        <span class="tag">@Model.Jobs.Count job@(Model.Jobs.Count == 1 ? string.Empty : "s")</span>
+    </header>
+    <div class="table-wrapper">
+        <table class="jobs-table">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Company</th>
+                    <th>Location</th>
+                    <th>Salary</th>
+                    <th>Apply Link</th>
+                    <th>Search Key</th>
+                    <th>Posted</th>
+                    <th>Matching Score</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Jobs.Count == 0)
+            {
+                <tr>
+                    <td colspan="8" class="empty">No jobs were found for this timeframe.</td>
+                </tr>
+            }
+            else
+            {
+                foreach (var job in Model.Jobs)
+                {
+                    <tr data-job-id="@job.Id">
+                        <td>@job.JobTitle</td>
+                        <td>@job.Company</td>
+                        <td>@job.Location</td>
+                        <td>@job.Salary</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(job.ApplyLink))
+                            {
+                                <a href="@job.ApplyLink" target="_blank" rel="noopener">Apply</a>
+                            }
+                        </td>
+                        <td>@job.SearchKey</td>
+                        <td data-posted="@job.PostedAt.ToString("o")">@job.PostedAt.ToString("g")</td>
+                        <td>
+                            <div class="score" data-score="@job.MatchingScore">@job.MatchingScore.ToString("F1")%</div>
+                            @if (job.MatchedKeywords.Any())
+                            {
+                                <div class="score-keywords">Matched: @string.Join(", ", job.MatchedKeywords)</div>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        window.dashboardOptions = {
+            hasResume: @Model.HasResume.ToString().ToLowerInvariant()
+        };
+    </script>
+}
