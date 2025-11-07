@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Job Displayer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>HiringCafe Job Tracker</h1>
+
+      <section aria-labelledby="resume-section">
+        <h2 id="resume-section">Resume</h2>
+        <p>
+          Upload your resume once to calculate the Applicant Tracking System (ATS) matching score for each job.
+          Plain text formats such as <code>.txt</code> are recommended.
+        </p>
+        <form id="resume-form">
+          <input type="file" id="resume-file" name="file" accept=".txt,.md,.pdf,.doc,.docx" required />
+          <button type="submit">Upload resume</button>
+        </form>
+        <p id="resume-status" class="status-message">No resume uploaded yet.</p>
+      </section>
+
+      <section aria-labelledby="filters-section">
+        <div class="filters">
+          <h2 id="filters-section">Job Feed</h2>
+          <label for="timeframe-select">Sort by timeframe</label>
+          <select id="timeframe-select" name="timeframe">
+            <option value="recent" selected>Recent</option>
+            <option value="24h">Last 24 hours</option>
+            <option value="3d">Past 3 days</option>
+            <option value="5d">Past 5 days</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Job Title</th>
+                <th scope="col">Company</th>
+                <th scope="col">Location</th>
+                <th scope="col">Salary</th>
+                <th scope="col">Search Key</th>
+                <th scope="col">Matching Score</th>
+                <th scope="col">Apply</th>
+              </tr>
+            </thead>
+            <tbody id="jobs-body">
+              <tr>
+                <td colspan="7" class="text-center">No job listings yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  </body>
+</html>
