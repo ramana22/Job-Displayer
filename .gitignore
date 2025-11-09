@@ -1,0 +1,18 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio
+.vs/
+
+# Node modules
+HiringCafeTracker/Frontend/node_modules/
+
+# Environment files
+*.env
+
+# Logs
+*.log
+
+# Resumes storage
+HiringCafeTracker/Backend/resumes/
