@@ -1,118 +1,53 @@
-# HiringCafe Job Tracker
+# Job Displayer
 
-A full-stack application that ingests HiringCafe job watcher payloads, stores them in SQL Server, and surfaces a resume-aware dashboard for managing your pipeline.
+A lightweight Flask application that stores the positions surfaced by the HiringCafe Job Watcher, calculates a resume-based matching score, and displays everything in a web dashboard.
 
-## Project Structure
+## Features
 
-```
-HiringCafeTracker/
- ├── Backend/
- │   ├── Controllers/
- │   ├── Data/
- │   ├── DTOs/
- │   ├── Models/
- │   ├── Services/
- │   ├── HiringCafeTracker.Backend.csproj
- │   ├── Program.cs
- │   └── appsettings.json
- ├── Frontend/
- │   ├── src/
- │   ├── index.html
- │   ├── package.json
- │   ├── tailwind.config.js
- │   └── vite.config.js
- └── Database/
-     └── schema.sql
-```
+- REST API to ingest job postings (`POST /api/jobs`).
+- Resume upload endpoint (`POST /api/resume`) to keep the latest resume on record.
+- Matching score calculation between the active resume and every job.
+- Dashboard that lists jobs in a sortable table with timeframe filters (Recent, Last 24 Hours, Past 3 Days, Past 5 Days).
 
-## Backend Setup (ASP.NET Core 8 + SQL Server)
+## Getting Started
 
-1. **Restore dependencies**
-   ```bash
-   cd HiringCafeTracker/Backend
-   dotnet restore
-   ```
+### Requirements
 
-2. **Apply database schema**
-   * Update the `DefaultConnection` string in `appsettings.json` if needed.
-   * Either run the SQL in `../Database/schema.sql` on your SQL Server instance or use EF Core migrations (`dotnet ef database update`).
+- Python 3.10+
+- pip
 
-3. **Configure API key**
-   * Set the `ApiKey` value in `appsettings.json` (or via environment variable `ApiKey`).
-   * The GitHub Job Watcher must supply this key in the `X-API-KEY` header.
-
-4. **Run the API**
-   ```bash
-   dotnet run --urls "https://localhost:5001;http://localhost:5000"
-   ```
-
-### API Reference
-
-* `POST /api/jobs/import` — Bulk ingest HiringCafe jobs. Requires `X-API-KEY`.
-* `GET /api/jobs` — Retrieve jobs with optional `timeframe`, `source`, and `status` query string filters.
-* `POST /api/jobs/{id}/apply` — Mark a job as applied.
-* `GET /api/jobs/sources` — List distinct sources for filter menus.
-* `GET /api/companies` — Get unique companies and their apply links.
-* `POST /api/resumes` — Upload a PDF/DOCX resume (updates matching scores).
-* `GET /api/resumes/active` — Returns the active resume metadata.
-
-### HiringCafe Watcher Payload Example
+### Installation
 
 ```bash
-curl -X POST "https://localhost:5001/api/jobs/import" \
-     -H "Content-Type: application/json" \
-     -H "X-API-KEY: <your-api-key>" \
-     -d '[{"JobId":"HC12345","JobTitle":".NET Developer","Company":"TechNova Systems","Location":"Austin, TX","Salary":"$90,000 – $110,000","Description":"Looking for experienced .NET Core developer...","ApplyLink":"https://hiringcafe.com/job/HC12345","SearchKey":".NET Developer","PostedTime":"2025-11-09T10:00:00","Source":"HiringCafe"}]'
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## Frontend Setup (React + Vite + Tailwind)
+### Running the application
 
-1. **Install dependencies**
-   ```bash
-   cd HiringCafeTracker/Frontend
-   npm install
-   ```
+```bash
+flask --app app run --debug
+```
 
-2. **Start the dev server**
-   ```bash
-   npm run dev
-   ```
-   The Vite dev server proxies `/api` requests to `https://localhost:5001` by default.
+The application starts on <http://localhost:5000>. The default SQLite database is created automatically as `jobs.db`. You can override the database path by setting the `JOB_DISPLAYER_DATABASE` environment variable to a SQLAlchemy compatible URI.
 
-3. **Build for production**
-   ```bash
-   npm run build
-   ```
+### API Summary
 
-## Resume Matching
+- `POST /api/jobs`
+  - Accepts either a single job object or a list of jobs.
+  - Each job supports the following keys: `job_title`, `company`, `location`, `salary`, `apply_link`, `search_key`, `description`, `posted_at` (ISO 8601 string).
+- `GET /api/jobs?timeframe=<recent|24h|3d|5d>`
+  - Returns the stored jobs sorted by newest first and the calculated matching score.
+- `POST /api/resume`
+  - Accepts a `multipart/form-data` upload (`file` field). The most recently uploaded resume is used to compute scores.
+- `GET /api/resume`
+  - Retrieves metadata about the most recently uploaded resume.
 
-* Upload a PDF or DOCX resume via the dashboard.
-* The backend extracts text with PdfPig/OpenXML and computes token overlap against job fields to derive the `MatchingScore`.
-* Scores are recalculated automatically when jobs are imported or the resume changes.
+### HiringCafe Job Watcher Integration
 
-## Seeding Data
+Configure your HiringCafe Job Watcher workflow to `POST` the JSON payload directly to `/api/jobs`. The application deduplicates jobs by `apply_link` when provided.
 
-If you want to seed records without the GitHub bot, you can:
+## Matching Score
 
-1. Run the SQL statements in `Database/schema.sql` to create tables.
-2. Insert sample rows into `Jobs` using SQL or the `/api/jobs/import` endpoint.
-3. Use the dashboard to upload a resume and begin triaging jobs.
-
-## Logging & Error Handling
-
-* ASP.NET logging is configured for informational output.
-* Resume uploads log failures server-side and return a generic 500 error to the client.
-* The React UI displays friendly error banners for API failures.
-
-## Security Notes
-
-* Protect the ingestion endpoint with the `X-API-KEY` header.
-* Enforce HTTPS when exposing the API publicly.
-* Resume files are stored on disk (`resumes/` by default); ensure proper filesystem permissions in production.
-
-## Testing
-
-* Backend: `dotnet test` once you add unit/integration tests.
-* Frontend: Add component tests with Vitest/React Testing Library as needed.
-
-Happy tracking!
+The matching score is a simple keyword overlap between the resume and each job (using job title, company, location, salary, search key, and description). Uploading a resume enables the score calculation; otherwise the table prompts the user to upload one.
